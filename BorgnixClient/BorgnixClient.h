@@ -1,11 +1,12 @@
 /*
- PubSubClient.h - A simple client for MQTT.
-  Nicholas O'Leary
-  http://knolleary.net
+ BorgnixClient.cpp - Base on PubSubClient for arduino mqtt
+  Zheng Wang
+  http://www.borgnix.com
+
 */
 
-#ifndef PubSubClient_h
-#define PubSubClient_h
+#ifndef BorgnixClient_h
+#define BorgnixClient_h
 
 #include <Arduino.h>
 #include "Client.h"
@@ -38,7 +39,9 @@
 #define MQTTQOS1        (1 << 1)
 #define MQTTQOS2        (2 << 1)
 
-class PubSubClient {
+#define UUID_MAX_LEN      100
+
+class BorgnixClient {
 private:
    Client* _client;
    uint8_t buffer[MQTT_MAX_PACKET_SIZE];
@@ -55,12 +58,21 @@ private:
    char* domain;
    uint16_t port;
    Stream* stream;
+   // Add Borgnix channel
+   char* UUIDin; //receive command from borgnix
+   char* UUIDout; //send data to borgnix
+   char* uuid;
+   char* token;
 public:
-   PubSubClient();
-   PubSubClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
-   PubSubClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
-   PubSubClient(char*, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
-   PubSubClient(char*, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
+   BorgnixClient();
+   //BorgnixClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
+   //BorgnixClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
+   //Add Borgnix API
+   BorgnixClient(char*, uint16_t, char*, char*, void (*)(char*,uint8_t*,unsigned int), Client& client); 
+   BorgnixClient(char*, uint16_t, char*, char*, void (*)(char*,uint8_t*,unsigned int), Client& client, Stream&); 
+   
+   BorgnixClient(char*, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
+   BorgnixClient(char*, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
    boolean connect(char *);
    boolean connect(char *, char *, char *);
    boolean connect(char *, char *, uint8_t, uint8_t, char *);
@@ -75,6 +87,12 @@ public:
    boolean unsubscribe(char *);
    boolean loop();
    boolean connected();
+   //Add Borgnix API
+   boolean BorgDevConnect(char*);
+   boolean BorgDevSend(char *);
+   void BorgDevDisconnect();
+
+
 };
 
 

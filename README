@@ -4,3 +4,6 @@ http://knolleary.net/arduino-client-for-mqtt/
 
 Base on pubsubclient, build the BorgnixAPI for arduino platform
 
+The BorgnixClient extend PubSubClient to support borgnix UUID/token
+
+

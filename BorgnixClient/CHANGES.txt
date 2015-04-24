@@ -1,3 +1,11 @@
+BorgnixClient:
+
+1.0
+   * Change BorgnixClient construction function, Add UUID/token 
+   * Add BorgDevConnect(), BorgDevSend(), BorgDevDisconnect()
+   
+
+PubSubClient Changelog:
 1.9
    * Do not split MQTT packets over multiple calls to _client->write()
    * API change: All constructors now require an instance of Client

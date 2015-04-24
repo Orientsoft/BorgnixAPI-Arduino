@@ -1,18 +1,48 @@
 /*
+ BorgnixClient.cpp - Base on PubSubClient for arduino mqtt
+  Zheng Wang
+  http://www.borgnix.com
+
  PubSubClient.cpp - A simple client for MQTT.
   Nicholas O'Leary
   http://knolleary.net
+
 */
 
-#include "PubSubClient.h"
+#include "BorgnixClient.h"
 #include <string.h>
 
-PubSubClient::PubSubClient() {
+BorgnixClient::BorgnixClient() {
    this->_client = NULL;
    this->stream = NULL;
 }
 
-PubSubClient::PubSubClient(uint8_t *ip, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
+
+//BorgnixClient constructure function, include UUID and token
+BorgnixClient::BorgnixClient(char* host, uint16_t port, char* uuid, char* token, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
+   this->_client = &client;
+   this->callback = callback;
+   this->domain = host;
+   this->port = port;
+   this->domain = NULL;
+   this->stream = NULL;
+   this->uuid = uuid;
+   this->token = token;
+}
+
+
+BorgnixClient::BorgnixClient(char* host, uint16_t port, char* uuid, char* token, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
+   this->_client = &client;
+   this->callback = callback;
+   this->domain = host;
+   this->port = port;
+   this->domain = NULL;
+   this->stream = &stream;
+   this->uuid = uuid;
+   this->token = token;
+}
+/* Retired 
+BorgnixClient::BorgnixClient(uint8_t *ip, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
    this->_client = &client;
    this->callback = callback;
    this->ip = ip;
@@ -21,7 +51,8 @@ PubSubClient::PubSubClient(uint8_t *ip, uint16_t port, void (*callback)(char*,ui
    this->stream = NULL;
 }
 
-PubSubClient::PubSubClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
+
+BorgnixClient::BorgnixClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
    this->_client = &client;
    this->callback = callback;
    this->domain = domain;
@@ -29,7 +60,7 @@ PubSubClient::PubSubClient(char* domain, uint16_t port, void (*callback)(char*,u
    this->stream = NULL;
 }
 
-PubSubClient::PubSubClient(uint8_t *ip, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
+BorgnixClient::BorgnixClient(uint8_t *ip, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
    this->_client = &client;
    this->callback = callback;
    this->ip = ip;
@@ -38,7 +69,14 @@ PubSubClient::PubSubClient(uint8_t *ip, uint16_t port, void (*callback)(char*,ui
    this->stream = &stream;
 }
 
-PubSubClient::PubSubClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
+BorgnixClient::BorgnixClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
+   this->_client = &client;
+   this->callback = callback;
+   this->domain = domain;
+   this->port = port;
+   this->stream = &stream;
+}
+BorgnixClient::BorgnixClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
    this->_client = &client;
    this->callback = callback;
    this->domain = domain;
@@ -46,20 +84,22 @@ PubSubClient::PubSubClient(char* domain, uint16_t port, void (*callback)(char*,u
    this->stream = &stream;
 }
 
-boolean PubSubClient::connect(char *id) {
+****/
+
+boolean BorgnixClient::connect(char *id) {
    return connect(id,NULL,NULL,0,0,0,0);
 }
 
-boolean PubSubClient::connect(char *id, char *user, char *pass) {
+boolean BorgnixClient::connect(char *id, char *user, char *pass) {
    return connect(id,user,pass,0,0,0,0);
 }
 
-boolean PubSubClient::connect(char *id, char* willTopic, uint8_t willQos, uint8_t willRetain, char* willMessage)
+boolean BorgnixClient::connect(char *id, char* willTopic, uint8_t willQos, uint8_t willRetain, char* willMessage)
 {
    return connect(id,NULL,NULL,willTopic,willQos,willRetain,willMessage);
 }
 
-boolean PubSubClient::connect(char *id, char *user, char *pass, char* willTopic, uint8_t willQos, uint8_t willRetain, char* willMessage) {
+boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic, uint8_t willQos, uint8_t willRetain, char* willMessage) {
    if (!connected()) {
       int result = 0;
       
@@ -136,12 +176,12 @@ boolean PubSubClient::connect(char *id, char *user, char *pass, char* willTopic,
    return false;
 }
 
-uint8_t PubSubClient::readByte() {
+uint8_t BorgnixClient::readByte() {
    while(!_client->available()) {}
    return _client->read();
 }
 
-uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
+uint16_t BorgnixClient::readPacket(uint8_t* lengthLength) {
    uint16_t len = 0;
    buffer[len++] = readByte();
    bool isPublish = (buffer[0]&0xF0) == MQTTPUBLISH;
@@ -191,7 +231,7 @@ uint16_t PubSubClient::readPacket(uint8_t* lengthLength) {
    return len;
 }
 
-boolean PubSubClient::loop() {
+boolean BorgnixClient::loop() {
    if (connected()) {
       unsigned long t = millis();
       if ((t - lastInActivity > MQTT_KEEPALIVE*1000UL) || (t - lastOutActivity > MQTT_KEEPALIVE*1000UL)) {
@@ -255,15 +295,15 @@ boolean PubSubClient::loop() {
    return false;
 }
 
-boolean PubSubClient::publish(char* topic, char* payload) {
+boolean BorgnixClient::publish(char* topic, char* payload) {
    return publish(topic,(uint8_t*)payload,strlen(payload),false);
 }
 
-boolean PubSubClient::publish(char* topic, uint8_t* payload, unsigned int plength) {
+boolean BorgnixClient::publish(char* topic, uint8_t* payload, unsigned int plength) {
    return publish(topic, payload, plength, false);
 }
 
-boolean PubSubClient::publish(char* topic, uint8_t* payload, unsigned int plength, boolean retained) {
+boolean BorgnixClient::publish(char* topic, uint8_t* payload, unsigned int plength, boolean retained) {
    if (connected()) {
       // Leave room in the buffer for header and variable length field
       uint16_t length = 5;
@@ -281,7 +321,7 @@ boolean PubSubClient::publish(char* topic, uint8_t* payload, unsigned int plengt
    return false;
 }
 
-boolean PubSubClient::publish_P(char* topic, uint8_t* PROGMEM payload, unsigned int plength, boolean retained) {
+boolean BorgnixClient::publish_P(char* topic, uint8_t* PROGMEM payload, unsigned int plength, boolean retained) {
    uint8_t llen = 0;
    uint8_t digit;
    unsigned int rc = 0;
@@ -326,7 +366,7 @@ boolean PubSubClient::publish_P(char* topic, uint8_t* PROGMEM payload, unsigned 
    return rc == tlen + 4 + plength;
 }
 
-boolean PubSubClient::write(uint8_t header, uint8_t* buf, uint16_t length) {
+boolean BorgnixClient::write(uint8_t header, uint8_t* buf, uint16_t length) {
    uint8_t lenBuf[4];
    uint8_t llen = 0;
    uint8_t digit;
@@ -353,11 +393,11 @@ boolean PubSubClient::write(uint8_t header, uint8_t* buf, uint16_t length) {
    return (rc == 1+llen+length);
 }
 
-boolean PubSubClient::subscribe(char* topic) {
+boolean BorgnixClient::subscribe(char* topic) {
   return subscribe(topic, 0);
 }
 
-boolean PubSubClient::subscribe(char* topic, uint8_t qos) {
+boolean BorgnixClient::subscribe(char* topic, uint8_t qos) {
    if (qos < 0 || qos > 1)
      return false;
 
@@ -377,7 +417,7 @@ boolean PubSubClient::subscribe(char* topic, uint8_t qos) {
    return false;
 }
 
-boolean PubSubClient::unsubscribe(char* topic) {
+boolean BorgnixClient::unsubscribe(char* topic) {
    if (connected()) {
       uint16_t length = 5;
       nextMsgId++;
@@ -392,7 +432,7 @@ boolean PubSubClient::unsubscribe(char* topic) {
    return false;
 }
 
-void PubSubClient::disconnect() {
+void BorgnixClient::disconnect() {
    buffer[0] = MQTTDISCONNECT;
    buffer[1] = 0;
    _client->write(buffer,2);
@@ -400,7 +440,7 @@ void PubSubClient::disconnect() {
    lastInActivity = lastOutActivity = millis();
 }
 
-uint16_t PubSubClient::writeString(char* string, uint8_t* buf, uint16_t pos) {
+uint16_t BorgnixClient::writeString(char* string, uint8_t* buf, uint16_t pos) {
    char* idp = string;
    uint16_t i = 0;
    pos += 2;
@@ -414,7 +454,7 @@ uint16_t PubSubClient::writeString(char* string, uint8_t* buf, uint16_t pos) {
 }
 
 
-boolean PubSubClient::connected() {
+boolean BorgnixClient::connected() {
    boolean rc;
    if (_client == NULL ) {
       rc = false;
@@ -424,4 +464,43 @@ boolean PubSubClient::connected() {
    }
    return rc;
 }
+/** Above Code is copy from PubSubClient **/
 
+
+boolean BorgnixClient::BorgDevConnect(char* ClientID){
+ 
+   sprintf(this->UUIDin, "%s%s", this->uuid, "_in");
+   sprintf(this->UUIDout, "%s%s", this->uuid, "_out");
+
+   if (connected()) {
+      subscribe(this->UUIDin);
+      return true;
+   }
+   else{
+      if (connect(ClientID)) {
+         subscribe(this->UUIDin);
+         return true;
+      }
+      return false;
+   }
+
+}
+void BorgnixClient::BorgDevDisconnect(){
+   disconnect();
+}
+
+boolean BorgnixClient::BorgDevSend(char *payload){
+   if(connected()){
+      publish(this->UUIDout, payload);
+      return true;
+   }
+   else{
+      if (connect(ClientID)) {
+         publish(this->UUIDout, payload);
+         return true;
+      }
+      return false;
+   }
+
+   
+}
