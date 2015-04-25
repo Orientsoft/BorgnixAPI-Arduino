@@ -24,7 +24,7 @@ Example
 ------------
 
 
-    ```cpp
+```cpp
     //Borgnix Arduino CC3000 wifi example
     // http://www.borgnix.com
     // Arduino JSON library
