@@ -22,6 +22,10 @@ send any payload to Borgnix server.
 
 Example
 ------------
+`code()`
+
+    Markup :  `code()`
+    ```C++
 //Borgnix Arduino CC3000 wifi example
   // http://www.borgnix.com
   // Arduino JSON library
@@ -67,6 +71,10 @@ Example
     delay(1000);
   }
 
+```
+
+    Markup : ```javascript
+    
 Installation
 ------------
 
