@@ -44,11 +44,8 @@ Example
     Adafruit_CC3000_Client client = Adafruit_CC3000_Client();
     BorgnixClient borgnixclient("voyager.orientsoft.cn", 11883, UUID,TOKEN, callback, client);
     
-    
     void callback (char* topic, byte* payload, unsigned int length) {
-    
       // Write the code
-    
     }
     
     void setup(void)
@@ -58,12 +55,8 @@ Example
       if(borgnixclient.BorgDevConnect(clientId)){
         Serial.println(F("Borgnix Connected"));
       }
-      
     }
-  
     void loop(void) {
-     
-  
       borgnixclient.loop();
       delay(1000);
     }
