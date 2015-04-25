@@ -22,34 +22,11 @@ send any payload to Borgnix server.
 
 Example
 ------------
+
 `code()`
 
     Markup :  `code()`
-
-```javascript
-    var specificLanguage_code = 
-    {
-        "data": {
-            "lookedUpPlatform": 1,
-            "query": "Kasabian+Test+Transmission",
-            "lookedUpItem": {
-                "name": "Test Transmission",
-                "artist": "Kasabian",
-                "album": "Kasabian",
-                "picture": null,
-                "link": "http://open.spotify.com/track/5jhJur5n4fasblLSCOcrTp"
-            }
-        }
-    }
-```
-
-    Markup : ```javascript
-             ```
-             
-`code()`
-
-    Markup :  `code()`
-    ```C++
+    ```cpp
     //Borgnix Arduino CC3000 wifi example
     // http://www.borgnix.com
     // Arduino JSON library
@@ -97,7 +74,7 @@ Example
 
 ```
 
-    Markup : ```C++
+    Markup : ```cpp
     ```
 Installation
 ------------
