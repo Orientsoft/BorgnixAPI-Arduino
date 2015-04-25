@@ -22,7 +22,7 @@ send any payload to Borgnix server.
 
 Example
 ------------
-
+See BorgnixClient/examples/Borgnix_CC3000_MQTT/Borgnix_CC3000_MQTT.ino
 
 ```cpp
     //Borgnix Arduino CC3000 wifi example
@@ -42,10 +42,11 @@ Example
     
     //get wifi or ethernet client
     Adafruit_CC3000_Client client = Adafruit_CC3000_Client();
+    //Create BorgnixClient
     BorgnixClient borgnixclient("voyager.orientsoft.cn", 11883, UUID,TOKEN, callback, client);
     
     void callback (char* topic, byte* payload, unsigned int length) {
-      // Write the code
+      // Write the code to process payload
     }
     
     void setup(void)
@@ -53,14 +54,13 @@ Example
       // Build network connection
            .....
       // connect to borgnix server
-        if(borgnixclient.BorgDevConnect(clientId)){
+      if(borgnixclient.BorgDevConnect(clientId)){
         Serial.println(F("Borgnix Connected"));
       }
     }
     void loop(void) {
       //Borgnix keepalive 
       borgnixclient.loop();
-      delay(1000);
     }
 ```
 
