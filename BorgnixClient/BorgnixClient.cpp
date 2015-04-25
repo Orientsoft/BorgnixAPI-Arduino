@@ -1,9 +1,9 @@
 /*
- BorgnixClient.cpp - Base on PubSubClient for arduino mqtt
+ BorgnixClient.cpp - Base on BorgnixClient for arduino mqtt
   Zheng Wang
   http://www.borgnix.com
 
- PubSubClient.cpp - A simple client for MQTT.
+ BorgnixClient.cpp - A simple client for MQTT.
   Nicholas O'Leary
   http://knolleary.net
 
@@ -17,31 +17,6 @@ BorgnixClient::BorgnixClient() {
    this->stream = NULL;
 }
 
-
-//BorgnixClient constructure function, include UUID and token
-BorgnixClient::BorgnixClient(char* host, uint16_t port, char* uuid, char* token, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
-   this->_client = &client;
-   this->callback = callback;
-   this->domain = host;
-   this->port = port;
-   this->domain = NULL;
-   this->stream = NULL;
-   this->uuid = uuid;
-   this->token = token;
-}
-
-
-BorgnixClient::BorgnixClient(char* host, uint16_t port, char* uuid, char* token, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
-   this->_client = &client;
-   this->callback = callback;
-   this->domain = host;
-   this->port = port;
-   this->domain = NULL;
-   this->stream = &stream;
-   this->uuid = uuid;
-   this->token = token;
-}
-/* Retired 
 BorgnixClient::BorgnixClient(uint8_t *ip, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
    this->_client = &client;
    this->callback = callback;
@@ -51,13 +26,22 @@ BorgnixClient::BorgnixClient(uint8_t *ip, uint16_t port, void (*callback)(char*,
    this->stream = NULL;
 }
 
-
 BorgnixClient::BorgnixClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
    this->_client = &client;
    this->callback = callback;
    this->domain = domain;
    this->port = port;
    this->stream = NULL;
+}
+//Add for Borgnix UUID certification
+BorgnixClient::BorgnixClient(char* domain, uint16_t port, char* uuid, char* token, void (*callback)(char*,uint8_t*,unsigned int), Client& client) {
+   this->_client = &client;
+   this->callback = callback;
+   this->domain = domain;
+   this->port = port;
+   this->stream = NULL;
+   this->uuid = uuid;
+   this->token = token;
 }
 
 BorgnixClient::BorgnixClient(uint8_t *ip, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
@@ -76,15 +60,6 @@ BorgnixClient::BorgnixClient(char* domain, uint16_t port, void (*callback)(char*
    this->port = port;
    this->stream = &stream;
 }
-BorgnixClient::BorgnixClient(char* domain, uint16_t port, void (*callback)(char*,uint8_t*,unsigned int), Client& client, Stream& stream) {
-   this->_client = &client;
-   this->callback = callback;
-   this->domain = domain;
-   this->port = port;
-   this->stream = &stream;
-}
-
-****/
 
 boolean BorgnixClient::connect(char *id) {
    return connect(id,NULL,NULL,0,0,0,0);
@@ -103,6 +78,8 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
    if (!connected()) {
       int result = 0;
       
+      // PRINTLNF("trying TCP");
+
       if (domain != NULL) {
         result = _client->connect(this->domain, this->port);
       } else {
@@ -150,7 +127,9 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
                length = writeString(pass,buffer,length);
             }
          }
-         
+
+         // PRINTLNF("sending MQTTCONNECT");
+
          write(MQTTCONNECT,buffer,length-5);
          
          lastInActivity = lastOutActivity = millis();
@@ -158,6 +137,7 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
          while (!_client->available()) {
             unsigned long t = millis();
             if (t-lastInActivity > MQTT_KEEPALIVE*1000UL) {
+               PRINTLNF("Err: MQTT_KEEPALIVE timeout");
                _client->stop();
                return false;
             }
@@ -170,6 +150,12 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
             pingOutstanding = false;
             return true;
          }
+
+         PRINTF("Err: MQTT: ");
+         PRINTLN(buffer[3]);
+      }
+      else{
+         PRINTLNF("Err: TCP");
       }
       _client->stop();
    }
@@ -178,10 +164,15 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
 
 uint8_t BorgnixClient::readByte() {
    while(!_client->available()) {}
-   return _client->read();
+   char c = _client->read();
+   PRINTCH(c, HEX);
+   PRINTCH(',');
+   return c;
 }
 
 uint16_t BorgnixClient::readPacket(uint8_t* lengthLength) {
+   // PRINTLNF("Received");
+
    uint16_t len = 0;
    buffer[len++] = readByte();
    bool isPublish = (buffer[0]&0xF0) == MQTTPUBLISH;
@@ -224,23 +215,31 @@ uint16_t BorgnixClient::readPacket(uint8_t* lengthLength) {
       len++;
    }
    
+   PRINTLN();
+
    if (!this->stream && len > MQTT_MAX_PACKET_SIZE) {
        len = 0; // This will cause the packet to be ignored.
+       PRINTLNF("Err: MQTT_MAX_PACKET_SIZE");
    }
+
+
 
    return len;
 }
 
 boolean BorgnixClient::loop() {
+
    if (connected()) {
       unsigned long t = millis();
       if ((t - lastInActivity > MQTT_KEEPALIVE*1000UL) || (t - lastOutActivity > MQTT_KEEPALIVE*1000UL)) {
          if (pingOutstanding) {
             _client->stop();
+            PRINTLNF("Err: Ping timed out");
             return false;
          } else {
             buffer[0] = MQTTPINGREQ;
             buffer[1] = 0;
+            // PRINTLNF("sending MQTTPINGREQ");
             _client->write(buffer,2);
             lastOutActivity = t;
             lastInActivity = t;
@@ -256,6 +255,7 @@ boolean BorgnixClient::loop() {
             lastInActivity = t;
             uint8_t type = buffer[0]&0xF0;
             if (type == MQTTPUBLISH) {
+               // PRINTLNF("MQTTPUBLISH");
                if (callback) {
                   uint16_t tl = (buffer[llen+1]<<8)+buffer[llen+2];
                   char topic[tl+1];
@@ -273,6 +273,7 @@ boolean BorgnixClient::loop() {
                     buffer[1] = 2;
                     buffer[2] = (msgId >> 8);
                     buffer[3] = (msgId & 0xFF);
+                    // PRINTLNF("sending MQTTPUBACK");
                     _client->write(buffer,4);
                     lastOutActivity = t;
 
@@ -282,10 +283,13 @@ boolean BorgnixClient::loop() {
                   }
                }
             } else if (type == MQTTPINGREQ) {
+               // PRINTLNF("MQTTPINGREQ");
                buffer[0] = MQTTPINGRESP;
                buffer[1] = 0;
+               // PRINTLNF("sending MQTTPINGRESP");
                _client->write(buffer,2);
             } else if (type == MQTTPINGRESP) {
+               // PRINTLNF("MQTTPINGRESP");
                pingOutstanding = false;
             }
          }
@@ -305,6 +309,9 @@ boolean BorgnixClient::publish(char* topic, uint8_t* payload, unsigned int pleng
 
 boolean BorgnixClient::publish(char* topic, uint8_t* payload, unsigned int plength, boolean retained) {
    if (connected()) {
+
+      // PRINTLNF("Publishing");
+
       // Leave room in the buffer for header and variable length field
       uint16_t length = 5;
       length = writeString(topic,buffer,length);
@@ -317,6 +324,28 @@ boolean BorgnixClient::publish(char* topic, uint8_t* payload, unsigned int pleng
          header |= 1;
       }
       return write(header,buffer,length-5);
+   }
+   return false;
+}
+
+//Streaming send - send the mqtt header with length, but user is responsable for writing actual buffer
+boolean BorgnixClient::publishHeader(char* topic, unsigned int plength, boolean retained) {
+   if (connected()) {
+
+      // PRINTLNF("Publishing");
+
+      // Leave room in the buffer for header and variable length field
+      uint16_t length = 5;
+      length = writeString(topic,buffer,length);
+      uint16_t i;
+      for (i=0;i<plength;i++) {
+         length++;
+      }
+      uint8_t header = MQTTPUBLISH;
+      if (retained) {
+         header |= 1;
+      }
+      return write(header,buffer,length-5, false);
    }
    return false;
 }
@@ -358,15 +387,22 @@ boolean BorgnixClient::publish_P(char* topic, uint8_t* PROGMEM payload, unsigned
    rc += _client->write(buffer,pos);
    
    for (i=0;i<plength;i++) {
-      rc += _client->write((char)pgm_read_byte_near(payload + i));
+      char c = (char)pgm_read_byte_near(payload + i);
+      rc += _client->write(c);
    }
-   
+      
+   PRINTLN();
+
    lastOutActivity = millis();
    
    return rc == tlen + 4 + plength;
 }
 
 boolean BorgnixClient::write(uint8_t header, uint8_t* buf, uint16_t length) {
+   return write(header, buf, length, true);
+}
+
+boolean BorgnixClient::write(uint8_t header, uint8_t* buf, uint16_t length, bool sendData) {
    uint8_t lenBuf[4];
    uint8_t llen = 0;
    uint8_t digit;
@@ -387,10 +423,25 @@ boolean BorgnixClient::write(uint8_t header, uint8_t* buf, uint16_t length) {
    for (int i=0;i<llen;i++) {
       buf[5-llen+i] = lenBuf[i];
    }
-   rc = _client->write(buf+(4-llen),length+1+llen);
-   
-   lastOutActivity = millis();
-   return (rc == 1+llen+length);
+
+   if(sendData){
+
+      WRITE(buf+(4-llen),length+1+llen);
+      rc = _client->write(buf+(4-llen),length+1+llen);
+      PRINTLN();
+
+      lastOutActivity = millis();
+      return (rc == 1+llen+length);
+
+   }else{
+
+      WRITE(buf+(4-llen),5+llen);
+      rc = _client->write(buf+(4-llen),5+llen);
+      PRINTLN();
+      
+      lastOutActivity = millis();
+      return (rc == 5+llen);
+   }
 }
 
 boolean BorgnixClient::subscribe(char* topic) {
@@ -402,6 +453,9 @@ boolean BorgnixClient::subscribe(char* topic, uint8_t qos) {
      return false;
 
    if (connected()) {
+
+      // PRINTLNF("sending MQTTSUBSCRIBE|MQTTQOS1");
+
       // Leave room in the buffer for header and variable length field
       uint16_t length = 5;
       nextMsgId++;
@@ -412,13 +466,17 @@ boolean BorgnixClient::subscribe(char* topic, uint8_t qos) {
       buffer[length++] = (nextMsgId & 0xFF);
       length = writeString(topic, buffer,length);
       buffer[length++] = qos;
-      return write(MQTTSUBSCRIBE|MQTTQOS1,buffer,length-5);
+      int toReturn = write(MQTTSUBSCRIBE|MQTTQOS1,buffer,length-5);
+      return toReturn;
    }
    return false;
 }
 
 boolean BorgnixClient::unsubscribe(char* topic) {
    if (connected()) {
+
+      // PRINTLNF("sending MQTTUNSUBSCRIBE|MQTTQOS1");
+
       uint16_t length = 5;
       nextMsgId++;
       if (nextMsgId == 0) {
@@ -427,17 +485,23 @@ boolean BorgnixClient::unsubscribe(char* topic) {
       buffer[length++] = (nextMsgId >> 8);
       buffer[length++] = (nextMsgId & 0xFF);
       length = writeString(topic, buffer,length);
-      return write(MQTTUNSUBSCRIBE|MQTTQOS1,buffer,length-5);
+      int toReturn = write(MQTTUNSUBSCRIBE|MQTTQOS1,buffer,length-5);
+      PRINTLN();
+      return toReturn;
    }
    return false;
 }
 
 void BorgnixClient::disconnect() {
+   // PRINTLNF("sending MQTTDISCONNECT");
+
    buffer[0] = MQTTDISCONNECT;
    buffer[1] = 0;
    _client->write(buffer,2);
    _client->stop();
    lastInActivity = lastOutActivity = millis();
+
+   PRINTLN();
 }
 
 uint16_t BorgnixClient::writeString(char* string, uint8_t* buf, uint16_t pos) {
@@ -464,41 +528,46 @@ boolean BorgnixClient::connected() {
    }
    return rc;
 }
-/** Above Code is copy from PubSubClient **/
 
-
+//Below Add Borgnix function
 boolean BorgnixClient::BorgDevConnect(char* ClientID){
- 
-   sprintf(this->UUIDin, "%s%s", this->uuid, "_in");
-   sprintf(this->UUIDout, "%s%s", this->uuid, "_out");
+   char* inTopic = new char[50];
+   char* outTopic = new char[50];
 
-   if (connected()) {
-      subscribe(this->UUIDin);
-      return true;
-   }
-   else{
-      if (connect(ClientID)) {
-         subscribe(this->UUIDin);
-         return true;
-      }
-      return false;
-   }
+   strcpy(inTopic, this->uuid);
+   strcpy(outTopic, this->uuid);
+   strncat(inTopic, "_in", 3);
+   strncat(outTopic, "_out", 4);
+
+   //PRINTLNF(inTopic);
+   //PRINTLNF(outTopic);
+
+   this->inTopic = inTopic;
+   this->outTopic = outTopic;
+
+   //Borgnix uuid/token certification
+   //if(connect(ClientID, this->uuid, this->token)){
+   if(connect(ClientID)){
+   		PRINTLNF("Borgnix Connect.");
+      	subscribe(this->inTopic);
+      	return true;
+   } 
+
+   return false;
 
 }
+
 void BorgnixClient::BorgDevDisconnect(){
    disconnect();
 }
 
 boolean BorgnixClient::BorgDevSend(char *payload){
    if(connected()){
-      publish(this->UUIDout, payload);
+      publish(this->outTopic, payload);
       return true;
    }
    else{
-      if (connect(ClientID)) {
-         publish(this->UUIDout, payload);
-         return true;
-      }
+      
       return false;
    }
 

@@ -1,5 +1,5 @@
 /*
- BorgnixClient.cpp - Base on PubSubClient for arduino mqtt
+ BorgnixClient.cpp - Base on BorgnixClient for arduino mqtt
   Zheng Wang
   http://www.borgnix.com
 
@@ -11,6 +11,28 @@
 #include <Arduino.h>
 #include "Client.h"
 #include "Stream.h"
+
+#define MQTT_DEBUG
+#ifdef MQTT_DEBUG
+  #ifdef PSTR
+   #define WRITEF( ... ) Serial.write( __VA_ARGS__ )
+   #define PRINTLNF( ... ) Serial.println( __VA_ARGS__ )
+   #define PRINTF( ... ) Serial.print( __VA_ARGS__ )
+  #else
+   #define WRITEF( ... ) Serial.write( __VA_ARGS__ )
+   #define PRINTLNF( ... ) Serial.println( __VA_ARGS__ )
+   #define PRINTF( ... ) Serial.print( __VA_ARGS__ )
+  #endif
+   #define WRITE( ... ) Serial.write( __VA_ARGS__ )
+   #define PRINTLN( ... ) Serial.println( __VA_ARGS__ )
+   #define PRINT( ... ) Serial.print( __VA_ARGS__ )
+   #define PRINTCH( ... ) Serial.print( __VA_ARGS__ )
+#else
+   #define PRINTCH( ... )
+   #define WRITE( ... )
+   #define PRINTLN( ... )
+   #define PRINT( ... )
+#endif
 
 // MQTT_MAX_PACKET_SIZE : Maximum packet size
 #define MQTT_MAX_PACKET_SIZE 128
@@ -39,8 +61,6 @@
 #define MQTTQOS1        (1 << 1)
 #define MQTTQOS2        (2 << 1)
 
-#define UUID_MAX_LEN      100
-
 class BorgnixClient {
 private:
    Client* _client;
@@ -53,24 +73,23 @@ private:
    uint16_t readPacket(uint8_t*);
    uint8_t readByte();
    boolean write(uint8_t header, uint8_t* buf, uint16_t length);
+   boolean write(uint8_t header, uint8_t* buf, uint16_t length, bool sendData);
    uint16_t writeString(char* string, uint8_t* buf, uint16_t pos);
    uint8_t *ip;
    char* domain;
    uint16_t port;
    Stream* stream;
-   // Add Borgnix channel
-   char* UUIDin; //receive command from borgnix
-   char* UUIDout; //send data to borgnix
    char* uuid;
    char* token;
+   char* inTopic;
+   char* outTopic;
+
 public:
    BorgnixClient();
-   //BorgnixClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
-   //BorgnixClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
-   //Add Borgnix API
-   BorgnixClient(char*, uint16_t, char*, char*, void (*)(char*,uint8_t*,unsigned int), Client& client); 
-   BorgnixClient(char*, uint16_t, char*, char*, void (*)(char*,uint8_t*,unsigned int), Client& client, Stream&); 
-   
+   BorgnixClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
+   BorgnixClient(uint8_t *, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
+   BorgnixClient(char*, uint16_t, char*, char*, void(*)(char*,uint8_t*,unsigned int),Client& client);
+
    BorgnixClient(char*, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client);
    BorgnixClient(char*, uint16_t, void(*)(char*,uint8_t*,unsigned int),Client& client, Stream&);
    boolean connect(char *);
@@ -81,19 +100,19 @@ public:
    boolean publish(char *, char *);
    boolean publish(char *, uint8_t *, unsigned int);
    boolean publish(char *, uint8_t *, unsigned int, boolean);
+   boolean publishHeader(char* topic, unsigned int plength, boolean retained);
    boolean publish_P(char *, uint8_t PROGMEM *, unsigned int, boolean);
    boolean subscribe(char *);
    boolean subscribe(char *, uint8_t qos);
    boolean unsubscribe(char *);
    boolean loop();
    boolean connected();
-   //Add Borgnix API
+
    boolean BorgDevConnect(char*);
-   boolean BorgDevSend(char *);
    void BorgDevDisconnect();
-
-
+   boolean BorgDevSend(char*);
 };
 
 
 #endif
+

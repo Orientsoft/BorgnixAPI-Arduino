@@ -1,9 +1,13 @@
-//Example modified from the pubsubclient library linked above
+//Borgnix Arduino CC3000 wifi example
+// http://www.borgnix.com
+// Arduino JSON library
+// https://github.com/bblanchon/ArduinoJson
 
 #include <Adafruit_CC3000.h>
 #include <ccspi.h>
 #include <SPI.h>
 #include <BorgnixClient.h>
+#include <ArduinoJson.h>
 
 
 // These are the interrupt and control pins
@@ -17,28 +21,45 @@
 // On an UNO, SCK = 13, MISO = 12, and MOSI = 11
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT, SPI_CLOCK_DIVIDER);
 
-#define WLAN_SSID       "orientsoft"
-#define WLAN_PASS       "welcome1"
-
+#define WLAN_SSID       "zhwang"
+#define WLAN_PASS       "2elkybwynql"
+// Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
 #define WLAN_SECURITY   WLAN_SEC_WPA2
   
-
+//register Borgnix, get UUID/token from http://dev.borgnix.com
 #define UUID   "6a758a40-c39c-11e4-ac01-b5dcf150caf3"
 #define TOKEN  "595590183827a285474c768dcbff07ea2f780cd9"
 
 
 Adafruit_CC3000_Client client = Adafruit_CC3000_Client();
-BorgnixClient borgnixclient("z.borgnix.com", 11883, callback, client);
+BorgnixClient borgnixclient("voyager.orientsoft.cn", 11883, UUID,TOKEN, callback, client);
+
 
 void callback (char* topic, byte* payload, unsigned int length) {
-  Serial.println(topic);
-  Serial.write(payload, length);
-  Serial.println("");
-  digitalWrite(7, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);              // wait for a second
-  digitalWrite(7, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);              // wait for a second
-  //mqttclient.publish(UUID, "led flush");
+
+
+  //Decode Borgnix payload example "{"sensor":"LED","data":[13,1]}"
+  StaticJsonBuffer<200> jsonBuffer;
+  
+  JsonObject& root = jsonBuffer.parseObject((char *)payload);
+
+  if (!root.success()) {
+    Serial.println("parseObject() failed");
+    return;
+  }
+  
+  const char* sensor = root["sensor"];
+  int pin = root["data"][0];
+  int ep = root["data"][1];
+
+
+  if (!strcmp(sensor,"LED")) {
+     Serial.println(F("LED control"));
+     if (ep == 1) 
+       digitalWrite(pin, HIGH);   // turn the LED on (HIGH is the voltage level)
+     if (ep == 0)
+       digitalWrite(pin, LOW);
+  } 
 
 }
 
@@ -48,7 +69,7 @@ void setup(void)
   Serial.println(F("Hello, CC3000!\n"));
 
   // initialize digital pin 13 as an output.
-  pinMode(7, OUTPUT);
+  pinMode(13, OUTPUT);
 
   // If you want to set the aref to something other than 5v
   analogReference(EXTERNAL);
@@ -96,22 +117,30 @@ void setup(void)
     delay(1000);
   }
    
-    String clientIdStr = "BorgnixArduino_" + String(random(500000)));
-    int clientId_len = clientIdStr.length() + 1;
-    char clientId[clientId_len];
-    clientIdStr.toCharArray(clientId, clientId_len);    
+  String clientIdStr = "Borgnix_" + String(random(500000)) + "_" + String(random(500000));
+  int clientId_len = clientIdStr.length() + 1;
+  char clientId[clientId_len];
+  clientIdStr.toCharArray(clientId, clientId_len);    
 
-   // connect to the broker, and subscribe to a path
-   //if (mqttclient.connect(clientId, UUID, TOKEN)) {
-   if (borgnixclient.BorgDevConnect(clientId)) {
-     Serial.println(F("MQTT Connected"));    
-   }
+  if(borgnixclient.BorgDevConnect(clientId)){
+    Serial.println(F("Borgnix Connected"));
+  }
+  
 }
 
 void loop(void) {
  
-  mqttclient.loop();
-  delay(250);
+  // are we still connected?
+  if (!borgnixclient.connected()) {
+	borgnixclient.subscribe(UUID);
+        //borgnixclient.publish(UUID, "11");
+        //borgnixclient.publishHeader("tb", 51, false);
+  } else {
+    //borgnixclient.publish(PUBLISH_PATH, "11");
+  }
+
+  borgnixclient.loop();
+  delay(1000);
 }
 
 
