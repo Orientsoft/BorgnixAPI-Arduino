@@ -12,12 +12,12 @@ Function
 Construction function, need callback function to deal the in messages.
   callback(message, length)
 
-- **boolean BorgDevConnect(char* ClientID);**
+- **boolean BorgDevConnect(ClientID);**
 Connect to Borgnix mqtt server, if success connected, return true.
 
 - **void BorgDevDisconnect();**
 
-- **boolean BorgDevSend(char* payload);**
+- **boolean BorgDevSend(payload);**
 send any payload to Borgnix server.
 
 Example
@@ -50,13 +50,15 @@ Example
     
     void setup(void)
     {
-      .....
       // Build network connection
-      if(borgnixclient.BorgDevConnect(clientId)){
+           .....
+      // connect to borgnix server
+        if(borgnixclient.BorgDevConnect(clientId)){
         Serial.println(F("Borgnix Connected"));
       }
     }
     void loop(void) {
+      //Borgnix keepalive 
       borgnixclient.loop();
       delay(1000);
     }
