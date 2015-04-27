@@ -78,8 +78,6 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
    if (!connected()) {
       int result = 0;
       
-      // PRINTLNF("trying TCP");
-
       if (domain != NULL) {
         result = _client->connect(this->domain, this->port);
       } else {
@@ -116,6 +114,11 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
          buffer[length++] = ((MQTT_KEEPALIVE) >> 8);
          buffer[length++] = ((MQTT_KEEPALIVE) & 0xFF);
          length = writeString(id,buffer,length);
+		 
+		 //WRITE(buffer,(int)length);
+
+         
+
          if (willTopic) {
             length = writeString(willTopic,buffer,length);
             length = writeString(willMessage,buffer,length);
@@ -123,13 +126,14 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
 
          if(user != NULL) {
             length = writeString(user,buffer,length);
+             
             if(pass != NULL) {
                length = writeString(pass,buffer,length);
+               //WRITE(buffer,(int)length);
+         
             }
          }
-
-         // PRINTLNF("sending MQTTCONNECT");
-
+         
          write(MQTTCONNECT,buffer,length-5);
          
          lastInActivity = lastOutActivity = millis();
@@ -137,7 +141,6 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
          while (!_client->available()) {
             unsigned long t = millis();
             if (t-lastInActivity > MQTT_KEEPALIVE*1000UL) {
-               PRINTLNF("Err: MQTT_KEEPALIVE timeout");
                _client->stop();
                return false;
             }
@@ -150,12 +153,6 @@ boolean BorgnixClient::connect(char *id, char *user, char *pass, char* willTopic
             pingOutstanding = false;
             return true;
          }
-
-         PRINTF("Err: MQTT: ");
-         PRINTLN(buffer[3]);
-      }
-      else{
-         PRINTLNF("Err: TCP");
       }
       _client->stop();
    }
@@ -512,6 +509,8 @@ uint16_t BorgnixClient::writeString(char* string, uint8_t* buf, uint16_t pos) {
       buf[pos++] = *idp++;
       i++;
    }
+   PRINTLN(string);
+
    buf[pos-i-2] = (i >> 8);
    buf[pos-i-1] = (i & 0xFF);
    return pos;
@@ -536,21 +535,21 @@ boolean BorgnixClient::BorgDevConnect(char* ClientID){
 
    strcpy(inTopic, this->uuid);
    strcpy(outTopic, this->uuid);
-   strncat(inTopic, "_in", 3);
-   strncat(outTopic, "_out", 4);
+   strncat(inTopic, "/in", 3);
+   strncat(outTopic, "/out", 4);
 
    //PRINTLNF(inTopic);
    //PRINTLNF(outTopic);
+   //PRINTLNF(this->uuid);
+   //PRINTLNF(this->token);
 
    this->inTopic = inTopic;
    this->outTopic = outTopic;
 
    //Borgnix uuid/token certification
-   //if(connect(ClientID, this->uuid, this->token)){
-   if(connect(ClientID)){
-   		PRINTLNF("Borgnix Connect.");
-      	subscribe(this->inTopic);
-      	return true;
+   if(connect(ClientID, this->uuid, this->token)){
+                subscribe(this->inTopic);
+      return true;
    } 
 
    return false;
