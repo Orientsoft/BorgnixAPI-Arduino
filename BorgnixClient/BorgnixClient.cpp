@@ -535,8 +535,8 @@ boolean BorgnixClient::BorgDevConnect(char* ClientID){
 
    strcpy(inTopic, this->uuid);
    strcpy(outTopic, this->uuid);
-   strncat(inTopic, "/in", 3);
-   strncat(outTopic, "/out", 4);
+   strncat(inTopic, "/i", 2);
+   strncat(outTopic, "/o", 2);
 
    //PRINTLNF(inTopic);
    //PRINTLNF(outTopic);
